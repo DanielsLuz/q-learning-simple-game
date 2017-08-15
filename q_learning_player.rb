@@ -1,9 +1,10 @@
 class QLearningPlayer
-  attr_accessor :x, :game
+  attr_accessor :x, :y, :game
 
   def initialize
     @x = 0
-    @actions = [:left, :right]
+    @y = 0
+    @actions = [:left, :right, :up, :down]
     @first_run = true
 
     @learning_rate = 0.2
@@ -15,12 +16,16 @@ class QLearningPlayer
 
   def initialize_q_table
     # Initialize q_table states by actions
-    @q_table = Array.new(@game.map_size){ Array.new(@actions.length) }
+    @q_table = Array.new(@game.map_lines){
+      Array.new(@game.map_size){ Array.new(@actions.length) }
+    }
 
     # Initialize to random values
-    @game.map_size.times do |s|
-      @actions.length.times do |a|
-        @q_table[s][a] = @r.rand
+    @game.map_lines.times do |l|
+      @game.map_size.times do |s|
+        @actions.length.times do |a|
+          @q_table[l][s][a] = @r.rand
+        end
       end
     end
   end
@@ -45,13 +50,15 @@ class QLearningPlayer
       end
 
       # Our new state is equal to the player position
-      @outcome_state = @x
-      @q_table[@old_state][@action_taken_index] = @q_table[@old_state][@action_taken_index] + @learning_rate * (r + @discount * @q_table[@outcome_state].max - @q_table[@old_state][@action_taken_index])
+      @outcome_x = @x
+      @outcome_y = @y
+      @q_table[@old_y][@old_x][@action_taken_index] = @q_table[@old_y][@old_x][@action_taken_index] + @learning_rate * (r + @discount * @q_table[@outcome_y][@outcome_x].max - @q_table[@old_y][@old_x][@action_taken_index])
     end
 
     # Capture current state and score
     @old_score = @game.score
-    @old_state = @x
+    @old_y = @y
+    @old_x = @x
 
     # Chose action based on Q value estimates for state
     if @r.rand > @epsilon
@@ -59,8 +66,9 @@ class QLearningPlayer
       @action_taken_index = @r.rand(@actions.length).round
     else
       # Select based on Q table
+      l = @y
       s = @x
-      @action_taken_index = @q_table[s].each_with_index.max[1]
+      @action_taken_index = @q_table[l][s].each_with_index.max[1]
     end
 
     # Take action
