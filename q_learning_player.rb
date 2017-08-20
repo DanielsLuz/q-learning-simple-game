@@ -1,15 +1,16 @@
 class QLearningPlayer
-  attr_accessor :x, :y, :game
+  attr_accessor :x, :y, :game, :q_table
 
-  def initialize
-    @x = 0
-    @y = 0
+  def initialize(reuse_learned=true)
+    @x = 1
+    @y = 1
     @actions = [:left, :right, :up, :down]
     @first_run = true
 
     @learning_rate = 0.2
     @discount = 0.9
     @epsilon = 0.9
+    @reuse_learned = reuse_learned
 
     @r = Random.new
   end
@@ -17,14 +18,23 @@ class QLearningPlayer
   def initialize_q_table
     # Initialize q_table states by actions
     @q_table = Array.new(@game.map_lines){
-      Array.new(@game.map_size){ Array.new(@actions.length) }
+      Array.new(@game.map_columns){ Array.new(@actions.length) }
     }
 
+    # if true || @reuse_learned
+    if @reuse_learned
+      table = []
+      File.readlines('./p_table').each do |line|
+        table << line.split(",").map(&:to_f).each_slice(4).to_a
+      end
+      @q_table = table
+    else
     # Initialize to random values
-    @game.map_lines.times do |l|
-      @game.map_size.times do |s|
-        @actions.length.times do |a|
-          @q_table[l][s][a] = @r.rand
+      @game.map_lines.times do |l|
+        @game.map_columns.times do |s|
+          @actions.length.times do |a|
+            @q_table[l][s][a] = @r.rand
+          end
         end
       end
     end
@@ -49,10 +59,13 @@ class QLearningPlayer
         r = -1 # reward is -1 if our score decreased
       end
 
-      # Our new state is equal to the player position
-      @outcome_x = @x
-      @outcome_y = @y
-      @q_table[@old_y][@old_x][@action_taken_index] = @q_table[@old_y][@old_x][@action_taken_index] + @learning_rate * (r + @discount * @q_table[@outcome_y][@outcome_x].max - @q_table[@old_y][@old_x][@action_taken_index])
+      if position_not_changed
+        @q_table[@old_y][@old_x][@action_taken_index] = 0
+      else
+        # Our new state is equal to the player position
+        @q_table[@old_y][@old_x][@action_taken_index] = @q_table[@old_y][@old_x][@action_taken_index] + @learning_rate *
+          (r + @discount * @q_table[@y][@x].max - @q_table[@old_y][@old_x][@action_taken_index])
+      end
     end
 
     # Capture current state and score
@@ -66,20 +79,27 @@ class QLearningPlayer
       @action_taken_index = @r.rand(@actions.length).round
     else
       # Select based on Q table
-      l = @y
-      s = @x
-      @action_taken_index = @q_table[l][s].each_with_index.max[1]
+      @action_taken_index = @q_table[@y][@x].each_with_index.max[1]
     end
 
+    # print_table
     # Take action
     return @actions[@action_taken_index]
   end
 
-
   def print_table
-    @q_table.length.times do |i|
-      puts @q_table[i].to_s
+    @q_table.each do |line|
+      line.each do |col|
+        puts col.map {|ac| ac.round(2)}.join", "
+      end
+      puts "\n"
     end
+  end
+
+  private
+
+  def position_not_changed
+    @x == @old_x && @y == @old_y
   end
 
 end

@@ -4,8 +4,8 @@ class Player
   attr_accessor :x, :y
 
   def initialize
-    @x = 0
-    @y = 2
+    @x = 1
+    @y = 1
   end
 
   def get_input

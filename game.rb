@@ -1,10 +1,13 @@
 class Game
-  attr_accessor :score, :map_size, :map_lines
+  attr_accessor :score, :map_columns, :map_lines, :map
   def initialize player
     @run = 0
-    @map_size = 12
-    @map_lines = 4
-    @start_position = 3
+    @map_columns = 12
+    @map_lines = 6
+    @map = Array.new(@map_lines){Array.new(@map_columns)}
+    initialize_map
+    @start_x = 1
+    @start_y = 1
     @player = player
     reset
 
@@ -13,12 +16,20 @@ class Game
 
   end
 
+  def initialize_map
+    @map = [
+      "############",
+      "#=#========#",
+      "#=#=##=###=#",
+      "#=#=#==#===#",
+      "#======#O#C#",
+      "############"
+    ].map{|line| line.split("")}
+  end
+
   def reset
-    @player.x = @start_position
-    @cheese_x = 10
-    @cheese_y = 2
-    @pit_x = 0
-    @pit_y = 1
+    @player.y = @start_y
+    @player.x = @start_x
     @score = 0
     @run += 1
     @moves = 0
@@ -45,39 +56,25 @@ class Game
   def gameloop
     move = @player.get_input
     if move == :left
-      @player.x = if @player.x > 0
-                    @player.x-1 
-                  elsif @player.x == 0 
-                    0
-                  end
+      @player.x -= 1 if @map[@player.y][@player.x-1] != "#"
     elsif move == :right
-      @player.x = if @player.x < @map_size-1 
-                    @player.x+1 
-                  elsif @player.x == @map_size-1
-                    @map_size-1
-                  end
+      @player.x += 1 if @map[@player.y][@player.x+1] != "#"
     elsif move == :up
-      @player.y = if @player.y > 0
-                    @player.y-1 
-                  elsif @player.y == 0 
-                    0
-                  end
+      @player.y -= 1 if @map[@player.y-1][@player.x] != "#"
     elsif move == :down
-      @player.y = if @player.y < @map_lines-1 
-                    @player.y+1 
-                  elsif @player.y == @map_lines-1
-                    @map_lines-1
-                  end
+      @player.y += 1 if @map[@player.y+1][@player.x] != "#"
     end
 
-    if @player.x == @cheese_x && @player.y == @cheese_y
+    if @map[@player.y][@player.x] == "C"
       @score += 1
-      @player.x = @start_position
+      @player.x = @start_x
+      @player.y = @start_y
     end
 
-    if @player.x == @pit_x && @player.y == @pit_y
+    if @map[@player.y][@player.x] == "O"
       @score -= 1
-      @player.x = @start_position
+      @player.x = @start_x
+      @player.y = @start_y
     end
   end
 
@@ -85,19 +82,15 @@ class Game
     puts "\e[H\e[2J"
     map_table = []
     # Compute map line
-    @map_lines.times do |j|
-      map_line = @map_size.times.map do |i|
-        if @player.x == i && @player.y == j
+    @map.each_with_index do |line,line_index|
+      map_line = line.map.with_index do |col,col_index|
+        if @player.x == col_index && @player.y == line_index
           'P'
-        elsif @cheese_x == i && @cheese_y == j
-          'C'
-        elsif @pit_x == i && @pit_y == j
-          'O'
         else
-          '='
+          @map[line_index][col_index]
         end
       end
-      map_table << "\n\r##{map_line.join}#"
+      map_table << "\n\r#{map_line.join}"
     end
     # Draw to console
     # use printf because we want to update the line rather than print a new one
