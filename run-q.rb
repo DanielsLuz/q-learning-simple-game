@@ -1,7 +1,8 @@
 require './game.rb'
 require './q_learning_player.rb'
 
-p = QLearningPlayer.new
+reuse = ARGV[0] != "false"
+p = QLearningPlayer.new(reuse)
 g = Game.new( p )
 p.game = g
 
@@ -10,5 +11,9 @@ p.game = g
   g.reset
 end
 
-#p.print_table
+File.open("p_table", "w+") do |f|
+  p.q_table.each do |line|
+    f.puts line.join(",")
+  end
+end
 puts ""
